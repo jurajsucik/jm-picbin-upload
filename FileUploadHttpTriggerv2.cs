@@ -39,14 +39,24 @@ public class FileUploadHttpTriggerv2
 
         cloudBlockBlob.Properties.ContentType = file.Headers.ContentType.MediaType;
         cloudBlockBlob.Metadata.Add("origName", fileInfo.FileName);        
-        var xff = req.Headers.FirstOrDefault( x => x.Key == "X-Forwarded-For" ).Value.FirstOrDefault();
-        cloudBlockBlob.Metadata.Add("sourceIp", xff);
+        // var xff = req.Headers.FirstOrDefault( x => x.Key == "X-Forwarded-For" ).Value.FirstOrDefault();
+        // cloudBlockBlob.Metadata.Add("sourceIp", xff);
         
         using (var fileStream = await file.ReadAsStreamAsync())
         {
             await cloudBlockBlob.UploadFromStreamAsync(fileStream);
+
         }
 
-        return (ActionResult) new OkObjectResult(new { name = blobName });
+        var redirectTo = $"http://pic.ninja/{blobName}";
+        var referer = req.Headers.Referrer;
+        if (referer != null) {
+            logger.LogInformation($"Detected eferer {referer.AbsoluteUri}");
+            redirectTo = $"{referer.AbsoluteUri}i/{blobName}";
+        }
+        logger.LogInformation($"Redirecting to {redirectTo}");
+
+        // return (ActionResult) new OkObjectResult(new { name = blobName });
+        return (ActionResult) new RedirectResult(redirectTo);
     }
 }
